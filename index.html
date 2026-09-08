@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hero Transform Sound</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      background: #111;
+      color: #eee;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 500;
+    }
+    button {
+      font-size: 16px;
+      padding: 14px 28px;
+      border-radius: 8px;
+      border: 1px solid #555;
+      background: #222;
+      color: #eee;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.08s ease;
+    }
+    button:hover { background: #2c2c2c; }
+    button:active { transform: scale(0.98); }
+    #status {
+      min-height: 20px;
+      font-size: 13px;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <h1>Hero transform sound</h1>
+  <button id="heroBtn">▶ Play hero transform</button>
+  <div id="status"></div>
+
+  <script>
+    let ctx = null;
+    const statusEl = document.getElementById('status');
+
+    function getCtx() {
+      if (!ctx) {
+        const AudioCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtor) {
+          throw new Error('Web Audio API is not supported in this browser.');
+        }
+        ctx = new AudioCtor();
+      }
+      return ctx;
+    }
+
+    function playHeroTransform() {
+      const audioCtx = getCtx();
+      const now = audioCtx.currentTime;
+      const master = audioCtx.createGain();
+      master.gain.value = 0.35;
+      master.connect(audioCtx.destination);
+
+      const duration = 1.1;
+      const steps = 14;
+
+      for (let i = 0; i < steps; i++) {
+        const t = now + (i / steps) * duration;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = i % 2 === 0 ? 'square' : 'sawtooth';
+        const freqStart = 220 + i * 60 + Math.sin(i) * 40;
+        const freqEnd = freqStart * (1 + (i % 3 === 0 ? 0.9 : -0.4));
+
+        osc.frequency.setValueAtTime(freqStart, t);
+        osc.frequency.linearRampToValueAtTime(freqEnd, t + 0.06);
+
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.5, t + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+
+        osc.connect(gain);
+        gain.connect(master);
+        osc.start(t);
+        osc.stop(t + 0.08);
+      }
+
+      const clunkTime = now + duration - 0.05;
+      const clunkOsc = audioCtx.createOscillator();
+      const clunkGain = audioCtx.createGain();
+      clunkOsc.type = 'square';
+      clunkOsc.frequency.setValueAtTime(90, clunkTime);
+      clunkOsc.frequency.exponentialRampToValueAtTime(40, clunkTime + 0.25);
+      clunkGain.gain.setValueAtTime(0.6, clunkTime);
+      clunkGain.gain.exponentialRampToValueAtTime(0.0001, clunkTime + 0.25);
+      clunkOsc.connect(clunkGain);
+      clunkGain.connect(master);
+      clunkOsc.start(clunkTime);
+      clunkOsc.stop(clunkTime + 0.25);
+    }
+
+    document.getElementById('heroBtn').addEventListener('click', () => {
+      playHeroTransform();
+      statusEl.textContent = 'Playing hero sound...';
+      setTimeout(() => {
+        statusEl.textContent = '';
+      }, 1200);
+    });
+  </script>
+</body>
+</html>
